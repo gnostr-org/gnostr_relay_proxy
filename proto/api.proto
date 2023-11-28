@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package relay_middleware;
+
+service RelayHandler {
+  rpc HandleEvent(EventRequest) returns (EventReply) {}
+}
+
+message Event {
+  bytes id = 1;               // 32-byte SHA256 hash of serialized event
+  bytes pubkey = 2;           // 32-byte public key of event creator
+  fixed64 created_at = 3;     // UNIX timestamp provided by event creator
+  uint64 kind = 4;            // event kind
+  string content = 5;         // arbitrary event contents
+  repeated TagEntry tags = 6; // event tag array
+  bytes sig = 7;              // 32-byte signature of the event id
+  // Individual values for a single tag
+  message TagEntry { repeated string values = 1; }
+}
+
+message EventRequest {
+  // the event to be admitted for further relay processing
+  Event event = 1;
+  // IP address of the client that submitted the event
+  string ip_addr = 2;
+  // HTTP origin header from the client, if one exists
+  string origin = 3;
+  // HTTP user-agent header from the client, if one exists
+  string user_agent = 4;
+  // the public key associated with a NIP-42
+  // AUTH'd session, if authentication occurred
+  bytes auth_pubkey = 5;
+}
+
+message EventReply {
+  string id = 1;
+  bool accepted = 2;
+  string message = 3;
+}

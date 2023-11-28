@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.27)
 project(relay_middleware VERSION 0.1.0)
 
 if(NOT CMAKE_BUILD_TYPE)
@@ -9,11 +9,40 @@ string(TOLOWER ${CMAKE_BUILD_TYPE} CMAKE_BUILD_TYPE_LOWER)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+find_package(Threads REQUIRED)
+find_package(OpenSSL REQUIRED)
+find_package(Protobuf CONFIG REQUIRED)
+find_package(absl CONFIG REQUIRED)
+find_package(gRPC CONFIG REQUIRED)
+
+# Protobuf
+get_filename_component(api_proto "proto/api.proto" ABSOLUTE)
+get_filename_component(api_proto_path "${api_proto}" PATH)
+add_custom_command(
+      OUTPUT "api.pb.h" "api.pb.cc" "api.grpc.pb.cc" "api.grpc.pb.h"
+      COMMAND $<TARGET_FILE:protobuf::protoc>
+      ARGS --grpc_out "${CMAKE_CURRENT_BINARY_DIR}"
+        --cpp_out "${CMAKE_CURRENT_BINARY_DIR}"
+        -I "${api_proto_path}"
+        --plugin=protoc-gen-grpc="$<TARGET_FILE:gRPC::grpc_cpp_plugin>"
+        "${api_proto}"
+      DEPENDS "${api_proto}")
+
+# Main exe
 add_executable(relay_middleware 
   src/main.cpp
+  "api.pb.cc"
+  "api.grpc.pb.cc"
 )
-target_include_directories(relay_middleware PUBLIC "include" "uWebSockets/src" "uWebSockets/uSockets/src")
+target_include_directories(relay_middleware PUBLIC 
+  "include" 
+  "uWebSockets/src" 
+  "uWebSockets/uSockets/src" 
+  ${CMAKE_CURRENT_BINARY_DIR} 
+  ${Protobuf_INCLUDE_DIRS}
+)
 
+# uWebSockets
 add_library(uWs STATIC
   uWebSockets/uSockets/src/udp.c
   uWebSockets/uSockets/src/socket.c
@@ -28,14 +57,18 @@ add_library(uWs STATIC
   uWebSockets/uSockets/src/eventing/gcd.c
   uWebSockets/uSockets/src/eventing/libuv.c
 )
-target_include_directories(uWs PRIVATE "uWebSockets/src" "uWebSockets/uSockets/src" "/opt/homebrew/opt/openssl@3.0/include")
+target_include_directories(uWs PRIVATE "uWebSockets/src" "uWebSockets/uSockets/src" ${OPENSSL_INCLUDE_DIR})
 target_compile_definitions(uWs PRIVATE LIBUS_USE_OPENSSL)
-find_library(LIBSSL_LIB ssl)
-find_library(LIBCRYPTO_LIB crypto)
-target_link_libraries(uWs PRIVATE z ${LIBCRYPTO_LIB} ${LIBSSL_LIB})
+target_link_libraries(uWs PRIVATE z ${OPENSSL_CRYPTO_LIBRARY} ${OPENSSL_SSL_LIBRARY})
 
+# Linking
+target_link_libraries(relay_middleware PRIVATE 
+  uWs 
+  protobuf::libprotobuf
+  gRPC::grpc++
+)
 if (${CMAKE_CXX_COMPILER_ID} STREQUAL GNU OR ${CMAKE_CXX_COMPILER_ID} STREQUAL AppleClang)
-  target_link_libraries(relay_middleware PRIVATE uWs)
+  
 elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
   target_include_directories(relay_middleware PUBLIC ${VCPKG_INCLUDE_DIR})
   target_link_directories(relay_middleware PRIVATE ${VCPKG_LIB_DIR})

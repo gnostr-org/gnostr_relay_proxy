@@ -84,6 +84,12 @@
         "functional": "cpp",
         "iterator": "cpp",
         "memory_resource": "cpp",
-        "queue": "cpp"
+        "queue": "cpp",
+        "codecvt": "cpp",
+        "condition_variable": "cpp",
+        "csignal": "cpp",
+        "shared_mutex": "cpp",
+        "source_location": "cpp",
+        "typeindex": "cpp"
     }
 }
