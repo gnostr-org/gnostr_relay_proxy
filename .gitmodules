@@ -1,6 +1,8 @@
 [submodule "uWebSockets"]
 	path = uWebSockets
 	url = git@github.com:uNetworking/uWebSockets.git
+  ignore = dirty
 [submodule "protobuf"]
 	path = protobuf
-	url = https://github.com/gnostr-org/protobuf.git
+  url = https://github.com/gnostr-org/protobuf.git
+  ignore = dirty
