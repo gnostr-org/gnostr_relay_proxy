@@ -6,3 +6,7 @@
 	path = protobuf
   url = https://github.com/gnostr-org/protobuf.git
   ignore = dirty
+[submodule "grpc"]
+	path = grpc
+	url = https://github.com/grpc/grpc
+  ignore = dirty
